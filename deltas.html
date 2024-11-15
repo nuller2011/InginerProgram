@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Airplane Simulation</title>
+    <style>
+        body { margin: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        #controls { margin: 10px; padding: 10px; background: #ffffffbb; border-radius: 8px; }
+        canvas { display: block; }
+        input { margin: 5px; width: 50px; }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label>Pitch: <input type="range" id="pitch" min="-90" max="90" value="0"></label><br>
+        <label>Yaw: <input type="range" id="yaw" min="-90" max="90" value="0"></label><br>
+        <label>Roll: <input type="range" id="roll" min="-90" max="90" value="0"></label><br>
+        <label>Speed: <input type="range" id="speed" min="0" max="2" step="0.01" value="0.5"></label><br>
+        <label>X: <input type="number" id="xCoord" value="0"></label>
+        <label>Y: <input type="number" id="yCoord" value="0"></label>
+        <label>Z: <input type="number" id="zCoord" value="0"></label>
+    </div>
+    <div id="viewer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Инициализация сцены, камеры и рендерера
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('viewer').appendChild(renderer.domElement);
+
+        // Текстура неба
+        const skyTexture = new THREE.TextureLoader().load('https://threejsfundamentals.org/threejs/resources/images/sky.jpg');
+        scene.background = skyTexture;
+
+        // Создание самолёта
+        const airplaneGeometry = new THREE.BoxGeometry(1, 0.5, 4);
+        const airplaneMaterial = new THREE.MeshStandardMaterial({ color: 0x0077ff });
+        const airplane = new THREE.Mesh(airplaneGeometry, airplaneMaterial);
+        scene.add(airplane);
+
+        // Освещение
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7.5).normalize();
+        scene.add(light);
+
+        // Позиция камеры
+        camera.position.set(0, 2, 10);
+
+        // Управление самолётом
+        const pitchControl = document.getElementById('pitch');
+        const yawControl = document.getElementById('yaw');
+        const rollControl = document.getElementById('roll');
+        const speedControl = document.getElementById('speed');
+        const xCoordInput = document.getElementById('xCoord');
+        const yCoordInput = document.getElementById('yCoord');
+        const zCoordInput = document.getElementById('zCoord');
+
+        // Переменные для плавного движения
+        let velocity = new THREE.Vector3(0, 0, -0.5);
+        let targetPosition = new THREE.Vector3();
+        
+        function updateAirplane() {
+            // Получаем значения углов слайдеров
+            const pitch = THREE.Math.degToRad(pitchControl.value);
+            const yaw = THREE.Math.degToRad(yawControl.value);
+            const roll = THREE.Math.degToRad(rollControl.value);
+
+            // Плавные изменения углов для реалистичного эффекта
+            airplane.rotation.x += (pitch - airplane.rotation.x) * 0.05;
+            airplane.rotation.y += (yaw - airplane.rotation.y) * 0.05;
+            airplane.rotation.z += (roll - airplane.rotation.z) * 0.05;
+
+            // Плавное обновление скорости
+            velocity.z = -speedControl.value;
+            airplane.translateZ(velocity.z);
+
+            // Обновляем камеру, чтобы она следовала за самолётом
+            camera.position.copy(airplane.position).add(new THREE.Vector3(0, 2, 10));
+            camera.lookAt(airplane.position);
+
+            // Обновляем координаты самолёта
+            airplane.position.lerp(targetPosition, 0.05);
+        }
+
+        // Функция для установки новых координат
+        function setTargetPosition() {
+            targetPosition.set(
+                parseFloat(xCoordInput.value),
+                parseFloat(yCoordInput.value),
+                parseFloat(zCoordInput.value)
+            );
+        }
+
+        // Обновляем targetPosition при изменении значений в полях
+        xCoordInput.addEventListener('input', setTargetPosition);
+        yCoordInput.addEventListener('input', setTargetPosition);
+        zCoordInput.addEventListener('input', setTargetPosition);
+
+        // Анимация
+        function animate() {
+            requestAnimationFrame(animate);
+            updateAirplane();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
